@@ -1,0 +1,35 @@
+<html>
+    <head>
+      {% if title %}
+      <title>{{ title }}</title>
+      {% else %}
+      <title>Welcome to Tanya Prints</title>
+      {% endif %}
+    </head>
+    <body>
+		<h1>TANYA PRINTS</h1>
+        <div>
+		<a href="{{ url_for('index') }}">Home</a>
+		<a href="{{ url_for('blogs')}}">Blogs</a>
+		{% if current_user.is_anonymous %}
+		<a href="{{ url_for('login') }}">Sign In</a>
+		<a href="{{ url_for('register') }}">Register</a>
+		{%else%}
+		<a href="{{ url_for('user', username=current_user.username)}}">Profile</a>
+		<a href="{{ url_for('edit_profile') }}">Edit Profile</a>
+		<a href="{{ url_for('logout') }}">Logout</a>
+		{%endif%}
+ 		</div>
+		<hr>
+		{% with messages = get_flashed_messages() %}
+		{% if messages %}
+		<ol>
+			{% for message in messages %}
+			<li>{{ message }}</li>
+			{% endfor %}
+		</ol>
+		{% endif %}
+		{% endwith %}
+        {% block content %}{% endblock %}
+    </body>
+</html>
