@@ -77,25 +77,66 @@ def blogs():
 	return render_template('blogs.html', title='TP-Blogs', posts=posts)
 	
 @app.route('/user/<username>')
-@login_required
+#@login_required
 def user(username):
 		user = User.query.filter_by(username=username).first_or_404()
 		posts = user.blogs.all()
+		form = FollowForm()
 		
-		return render_template('user.html', posts=posts, user=user)
+		return render_template('user.html', posts=posts, user=user, form=form)
 		
 @app.route('/user/edit_profile', methods=['GET','POST'])
 @login_required
 def edit_profile():
-	form = ProfileForm()
-	if request.method == 'GET':
-		form.username.data = current_user.username
-		form.about_me.data = current_user.about_me
-	elif form.validate_on_submit():
+	form = ProfileForm(current_user.username)
+	if form.validate_on_submit():
 		current_user.username = form.username.data
 		current_user.about_me = form.about_me.data
 		db.session.commit()
 		flash('Your Profile is updated successfully.')
-		return redirect(url_for('edit_profile'))
+		return redirect(url_for('user', username=current_user.username))
+	elif request.method == 'GET':
+		form.username.data = current_user.username
+		form.about_me.data = current_user.about_me
 		
 	return render_template('edit_profile.html', title='TP-Profile_edit', form=form)
+	
+@app.route('/follow/<username>', methods = ['POST'])
+@login_required
+def follow(username):
+	form = FollowForm()
+	if form.validate_on_submit():
+		user = User.query.filter_by(username = username).first()
+		if user is None:
+			flash("User don't exist")
+			return redirect(url_for('index'))
+		elif user == current_user:
+			flash('You can not follow yourself')
+			return redirect(url_for('index'))
+		current_user.follow(user)
+		db.session.commit()
+		flash('You successfully followed {}'.format(user.username))
+		return redirect(url_for('user', username=username ))
+	else:
+		return redirect(url_for('index'))
+		
+@app.route('/unfollow/<username>', methods = ['POST'])
+@login_required
+def unfollow(username):
+	form = FollowForm()
+	if form.validate_on_submit():
+		user = User.query.filter_by(username = username).first()
+		if user is None:
+			flash("User don't exist")
+			return redirect(url_for('index'))
+		elif user == current_user:
+			flash('You can not unfollow yourself')
+			return redirect(url_for('index'))
+		current_user.unfollow(user)
+		db.session.commit()
+		flash('You successfully unfollowed {}'.format(user.username))
+		return redirect(url_for('user', username=username ))
+	else:
+		return redirect(url_for('index'))
+
+		
