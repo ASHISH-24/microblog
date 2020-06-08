@@ -12,11 +12,25 @@ def before_request():
 		current_user.last_seen = datetime.utcnow()
 		db.session.commit()	
 
-@app.route('/')
-@app.route('/index')
+@app.route('/', methods=['GET','POST'])
+@app.route('/index', methods=['GET','POST'])
 
 def index():
-	return render_template('index.html', title='TP-Home')
+	form = BlogForm()
+	
+	if form.validate_on_submit():
+		blog = Blog(body=form.content.data, author=current_user)
+		db.session.add(blog)
+		db.session.commit()
+		flash('Posted successfully')
+		return redirect(url_for('index'))
+	
+	'''if not current_user.is_anonymous:
+		f_blogs = current_user.followed_posts().all()
+	else:'''
+	f_blogs = Blog.query.order_by(Blog.time_stamp.desc()).all()
+	
+	return render_template('index.html', title='TP-Home', form=form, blogs=f_blogs)
 	
 #@app.route('/login')
 @app.route('/index/login', methods = ['GET','POST'])
@@ -59,7 +73,7 @@ def register():
 	return render_template('register.html', title='TP-Register', form=form)
 	
 @app.route('/logout')
-#@login_required
+@login_required
 def logout():
 	logout_user()
 	return redirect(url_for('index'))
@@ -72,15 +86,15 @@ def blogs():
 	for user in users:
 		post = user.blogs.all()
 		for post_ in post:
-			posts.extend(post_)
+			posts.append(post_)
 	
 	return render_template('blogs.html', title='TP-Blogs', posts=posts)
 	
 @app.route('/user/<username>')
-#@login_required
+@login_required
 def user(username):
 		user = User.query.filter_by(username=username).first_or_404()
-		posts = user.blogs.all()
+		posts = user.blogs.order_by(Blog.time_stamp.desc()).all()
 		form = FollowForm()
 		
 		return render_template('user.html', posts=posts, user=user, form=form)

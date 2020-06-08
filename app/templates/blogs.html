@@ -2,6 +2,6 @@
 
 {%block content%}
 	{% for post in posts %}
-    <div><p>{{ post.author.username }} says: <b>{{ post.body }}</b></p></div>
+		{%include 'user_blog.html'%}
     {% endfor %}
 {%endblock%}

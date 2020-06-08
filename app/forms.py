@@ -44,4 +44,7 @@ class ProfileForm(FlaskForm):
 				
 class FollowForm(FlaskForm):
 	submit = SubmitField('Submit')
-		
+	
+class BlogForm(FlaskForm):
+	content = TextAreaField('Say Something!', validators=[DataRequired(), Length(min=0, max=256)])
+	submit = SubmitField('Post')	

@@ -9,5 +9,23 @@
 	<div>
 		<h3>Our Recent Catalogue</h3>
 	</div>
+	{%if not current_user.is_anonymous%}
+	<div>
+	<form action='' method='post'>
+		{{form.hidden_tag()}}
+		<p>{{form.content.label}}<br>
+		   {{form.content()}}<br>
+		   {%for error in form.content.errors%}
+		   <span>{{error}}</span>
+		   {%endfor%}
+		</p>
+		<p>
+			{{form.submit()}}
+		</p>
+	</form>
+	
+	</div>
+	{%endif%}
+	
 	
 {% endblock %}

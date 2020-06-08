@@ -40,21 +40,22 @@ class User(UserMixin, db.Model):
 		digest = md5(self.email.lower().encode('utf-8')).hexdigest()
 		return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(digest, size)
 		
-	def is_following(self,user):
-		return self.followed.filter().count(followers.c.followed_id == user.id)>0
-	
 	def follow(self,user):
-		if not is_following(user):
+		if not self.is_following(user):
 			self.followed.append(user)
 			
 	def unfollow(self,user):
-		if is_following(user):
+		if self.is_following(user):
 			self.followed.remove(user)
+			
+	def is_following(self,user):
+		return self.followed.filter(followers.c.followed_id == user.id).count()>0
+			
 			
 	def followed_posts(self):
 		followed = Blog.query.join(followers, (followers.c.followed_id == Blog.user_id)).filter(followers.c.follower_id == self.id)
 		
-		own = Blog.query.filter_by(user_id == self.id)
+		own = Blog.query.filter_by(user_id =self.id)
 		return followed.union(own).order_by(Blog.time_stamp.desc())
 			
 			
