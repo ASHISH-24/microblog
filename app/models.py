@@ -1,8 +1,10 @@
 from hashlib import md5
 from datetime import datetime
-from app import db,login
+from app import db,login,app
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+from time import time
+import jwt
 
 followers = db.Table('followers',
 			db.Column('follower_id', db.Integer, db.ForeignKey('user.id')),
@@ -58,6 +60,19 @@ class User(UserMixin, db.Model):
 		own = Blog.query.filter_by(user_id =self.id)
 		return followed.union(own).order_by(Blog.time_stamp.desc())
 			
+	def get_reset_password_token(self, expires_in=600):
+		return jwt.encode(\
+				{'reset_password': self.id, 'expires_in':time()+ expires_in},\
+				app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+
+	@staticmethod
+	def verify_reset_password_token(token):
+		try:
+			id = jwt.decode(token, app.config['SECRET_KEY'],\
+			algorithm='HS256')['reset_password']
+		except:
+			return
+		return User.query.get(id)	
 			
 		
 class Blog(db.Model):
@@ -67,6 +82,7 @@ class Blog(db.Model):
 	time_stamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 	body = db.Column(db.String(512))
 	user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+	language = db.Column(db.String(5))
 	
 	def __repr__(self):
 		return '<Blog {}>'.format(self.title)

@@ -8,7 +8,7 @@ class LoginForm(FlaskForm):
 	username = StringField('Username', validators=[DataRequired()])
 	password = PasswordField('Password', validators=[DataRequired()])
 	remember_me = BooleanField('Remember Me')
-	submit = SubmitField('Sign In')
+	submit = SubmitField('Log In')
 	
 class RegisterForm(FlaskForm):
 	username = StringField('Username', validators=[DataRequired()])
@@ -46,5 +46,15 @@ class FollowForm(FlaskForm):
 	submit = SubmitField('Submit')
 	
 class BlogForm(FlaskForm):
-	content = TextAreaField('Say Something!', validators=[DataRequired(), Length(min=0, max=256)])
+	content = TextAreaField('Say Something', validators=[DataRequired(), Length(min=0, max=512)])
 	submit = SubmitField('Post')	
+	
+class ResetPasswordRequestForm(FlaskForm):
+	email = StringField('Email', validators=[DataRequired(), Email()])
+	submit = SubmitField('Submit')
+	
+class ResetPasswordForm(FlaskForm):
+	password = PasswordField('Password', validators=[DataRequired()])
+	re_password = PasswordField('Repeat Password',\
+								validators=[DataRequired(), EqualTo('password')])
+	submit = SubmitField('Reset')

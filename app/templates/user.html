@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 
-{%block content%}
+{%block app_content%}
 	<table>
 		<tr valign='top'>
-			<td><img src = {{ user.avatar(50) }}></td>
-			<td><h2>{{user.username}}</h2>
-			{% if user.about_me %}<p>{{user.about_me}}</p>{% endif %}
-			{% if user.last_seen %}<p>{{user.last_seen}}</p>{% endif %}
+			<td><img src = {{ user.avatar(50) }}, padding: 20px /></td>
+			<td>
+			<h2>{{user.username.title()}}</h2>
+			{% if user.about_me %}
+			<p>About : {{user.about_me}}</p>
+			{% endif %}
+			{% if user.last_seen %}
+			<p>Last seen : {{moment(user.last_seen).format('LLL')}}</p>
+			{% endif %}
 			</td>
 		</tr>
 	</table>
@@ -28,9 +33,24 @@
 		</form>
 	</p>
 	{%endif%}
+	<div>
+	{% if current_user == user%}
+	<h3>Your Posts</h3>
+	{%else%}
+	<h3>Posts by {{user.username.title()}}</h3>
+	{%endif%}
 	{% for post in posts %}
 		<p>{{post.body}}<br>
-			[{{post.time_stamp}}]
-		</p>	
-	{% endfor %}
+		   [{{moment(post.time_stamp).fromNow()}}]
+		</p>
+	{% endfor %}	
+	<!--{%if prev_url%}
+		<a href="{{prev_url}}">Newer</a>
+	{%endif%}
+	{%if next_url%}
+		<a href="{{next_url}}">Older</a>
+	{%endif%}
+	</div>-->
+	
+		
 {%endblock%}

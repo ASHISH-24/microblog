@@ -1,11 +1,20 @@
-from flask import render_template, flash, redirect, url_for, request
-from app import app,db,login
+from flask import render_template, flash, redirect, url_for, request, jsonify
+from app import *
 from app.forms import *
 from app.models import *
 from flask_login import login_user, current_user, logout_user, login_required
 from werkzeug.urls import url_parse
 from datetime import datetime
+from app.email import send_password_reset_email
+from guess_language import guess_language
+from app.translate import translate
 
+'''@app.route('/translate', methods=['POST'])
+def translate_text():
+	return jsonify({'text': translate(request.form['text'],\
+										request.form['source_language'],\
+										request.form['dest_language'])})
+'''
 @app.before_request
 def before_request():
 	if current_user.is_authenticated:
@@ -16,23 +25,10 @@ def before_request():
 @app.route('/index', methods=['GET','POST'])
 
 def index():
-	form = BlogForm()
 	
-	if form.validate_on_submit():
-		blog = Blog(body=form.content.data, author=current_user)
-		db.session.add(blog)
-		db.session.commit()
-		flash('Posted successfully')
-		return redirect(url_for('index'))
+	return render_template('index.html', title='TP-Home')
 	
-	'''if not current_user.is_anonymous:
-		f_blogs = current_user.followed_posts().all()
-	else:'''
-	f_blogs = Blog.query.order_by(Blog.time_stamp.desc()).all()
-	
-	return render_template('index.html', title='TP-Home', form=form, blogs=f_blogs)
-	
-#@app.route('/login')
+@app.route('/login', methods=['GET','POST'])
 @app.route('/index/login', methods = ['GET','POST'])
 
 def login():
@@ -43,19 +39,23 @@ def login():
 	
 	if form.validate_on_submit():
 		user = User.query.filter_by(username=form.username.data).first()
+		
 		if user is None or user.check_password(form.password.data) == False:
 			flash('invalid username or password')
 			return redirect(url_for('login'))
+		
 		login_user(user, remember=form.remember_me.data)
 		
-		'''next_page = request.args.get('next')
+		next_page = request.args.get('next')
+		
 		if not next_page or url_parse(next_page).netloc != '':
-			next_page = url_for('index')'''
-		return redirect(url_for('index'))
+			next_page = url_for('index')
+			
+		return redirect(next_page)
 			
 	return render_template('login.html', title='TP-SignIn', form=form)
 
-#@app.route('/signup', methods = ['GET', 'POST'])	
+@app.route('/signup', methods=['GET','POST'])	
 @app.route('/index/signup', methods=['GET','POST'])
 def register():
 	if current_user.is_authenticated:
@@ -81,23 +81,49 @@ def logout():
 @app.route('/index/blogs')
 @login_required
 def blogs():
-	posts = []
-	users = User.query.all()
-	for user in users:
-		post = user.blogs.all()
-		for post_ in post:
-			posts.append(post_)
+	form = BlogForm()
 	
-	return render_template('blogs.html', title='TP-Blogs', posts=posts)
+	if form.validate_on_submit():
+		language = guess_language(form.content.data)
+		if language == 'UNKNOWN' or len(language)>5:
+			language = ''
+		blog = Blog(body = form.content.data, author=current_user,\
+					language = language)
+		db.session.add(blog)
+		db.session.commit()
+		flash('Your thought posted successfully!')
+		return redirect(url_for('blog'))
+		
+	page  = request.args.get('page', 1, type=int)	
+	
+	posts = Blog.query.order_by(Blog.time_stamp.desc()).paginate(page, app.config['POST_PER_PAGE'], False)
+	
+	next_url = url_for('blogs', page=posts.next_num) if posts.has_next else None
+		
+	prev_url = url_for('blogs', page=posts.prev_num) if posts.has_prev else None
+		
+	return render_template('blogs.html', title='TP-Blogs', posts=posts.items, next_url=next_url, prev_url=prev_url,\
+							form = form)
 	
 @app.route('/user/<username>')
 @login_required
 def user(username):
 		user = User.query.filter_by(username=username).first_or_404()
-		posts = user.blogs.order_by(Blog.time_stamp.desc()).all()
+		
+		page = request.args.get('page',1,type=int)
+		posts = user.blogs.order_by(Blog.time_stamp.desc())\
+				.paginate(page, app.config['POST_PER_PAGE'], False)
+				
+		next_url = url_for('user', username=user.username, page=posts.next_num)\
+					if posts.has_next else None
+					
+		prev_url = url_for('user', username=user.username, page=posts.prev_num)\
+					if posts.has_prev else None
+		
 		form = FollowForm()
 		
-		return render_template('user.html', posts=posts, user=user, form=form)
+		return render_template('user.html', posts=posts.items, user=user,\
+					form=form, next_url=next_url, prev_url=prev_url)
 		
 @app.route('/user/edit_profile', methods=['GET','POST'])
 @login_required
@@ -152,5 +178,46 @@ def unfollow(username):
 		return redirect(url_for('user', username=username ))
 	else:
 		return redirect(url_for('index'))
+		
+@app.route('/reset_password_request', methods=['GET','POST'])
+def reset_password_request():
+	if current_user.is_authenticated:
+		return redirect(url_for('index'))
+		
+	form = ResetPasswordRequestForm()
+	if form.validate_on_submit():
+		user = User.query.filter_by(email=form.email.data).first()
+		if user:
+			send_password_reset_email(user)
+			flash('Check your email for link to password reset')
+			return redirect(url_for('login'))
+		else:
+			flash('You are not registered with us')
+			return redirect(url_for('register'))
+			
+	return render_template('reset_password_request.html', form=form, title='TP-Password Reset')
+	
+@app.route('/reset/<token>', methods=['GET','POST'])
+def reset_password(token):
+	if current_user.is_authenticated:
+		return redirect(url_for('index'))
+		
+	user = User.verify_reset_password_token(token)
+	if not user:
+		flash('Your token has expired!!')
+		return redirect(url_for('login'))
+	
+	form = ResetPasswordForm()
+	
+	if form.validate_on_submit():
+		user.set_password(form.password.data)
+		db.session.commit()
+		flash('Your password changed successfully')
+		return redirect(url_for('login'))
+		
+	return render_template('reset_password.html', form=form)
+
+		
+		
 
 		
