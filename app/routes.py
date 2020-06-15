@@ -78,7 +78,7 @@ def logout():
 	logout_user()
 	return redirect(url_for('index'))
 	
-@app.route('/index/blogs')
+@app.route('/index/blogs', methods=['GET','POST'])
 @login_required
 def blogs():
 	form = BlogForm()
@@ -92,7 +92,7 @@ def blogs():
 		db.session.add(blog)
 		db.session.commit()
 		flash('Your thought posted successfully!')
-		return redirect(url_for('blog'))
+		return redirect(url_for('blogs'))
 		
 	page  = request.args.get('page', 1, type=int)	
 	
