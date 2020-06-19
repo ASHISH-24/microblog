@@ -47,6 +47,7 @@ class FollowForm(FlaskForm):
 	
 class BlogForm(FlaskForm):
 	content = TextAreaField('Say Something', validators=[DataRequired(), Length(min=0, max=512)])
+	tag = StringField('Tag', validators=[DataRequired()])
 	submit = SubmitField('Post')	
 	
 class ResetPasswordRequestForm(FlaskForm):

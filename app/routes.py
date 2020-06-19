@@ -9,12 +9,6 @@ from app.email import send_password_reset_email
 from guess_language import guess_language
 from app.translate import translate
 
-'''@app.route('/translate', methods=['POST'])
-def translate_text():
-	return jsonify({'text': translate(request.form['text'],\
-										request.form['source_language'],\
-										request.form['dest_language'])})
-'''
 @app.before_request
 def before_request():
 	if current_user.is_authenticated:
@@ -25,8 +19,31 @@ def before_request():
 @app.route('/index', methods=['GET','POST'])
 
 def index():
+	form = BlogForm()
 	
-	return render_template('index.html', title='TP-Home')
+	if form.validate_on_submit():
+		language = guess_language(form.content.data)
+		if language == 'UNKNOWN' or len(language)>5:
+			language = ''
+		blog = Blog(body = form.content.data, author=current_user,\
+					language = language)
+		db.session.add(blog)
+		db.session.commit()
+		flash('Your thought posted successfully!')
+		return redirect(url_for('index'))
+		
+	page  = request.args.get('page', 1, type=int)	
+	
+	posts = Blog.query.order_by(Blog.time_stamp.desc()).\
+			paginate(page, app.config['POST_PER_PAGE'], False)
+	
+	next_url = url_for('index', page=posts.next_num) if posts.has_next else None
+		
+	prev_url = url_for('index', page=posts.prev_num) if posts.has_prev else None
+	
+	
+	return render_template('index.html', title='Home', posts=posts.items,\
+							next_url=next_url, prev_url=prev_url, form=form)
 	
 @app.route('/login', methods=['GET','POST'])
 @app.route('/index/login', methods = ['GET','POST'])
@@ -81,29 +98,12 @@ def logout():
 @app.route('/index/explore', methods=['GET','POST'])
 @login_required
 def explore():
-	form = BlogForm()
+	form = FollowForm()
+	users = User.query.all()
 	
-	if form.validate_on_submit():
-		language = guess_language(form.content.data)
-		if language == 'UNKNOWN' or len(language)>5:
-			language = ''
-		blog = Blog(body = form.content.data, author=current_user,\
-					language = language)
-		db.session.add(blog)
-		db.session.commit()
-		flash('Your thought posted successfully!')
-		return redirect(url_for('explore'))
 		
-	page  = request.args.get('page', 1, type=int)	
-	
-	posts = Blog.query.order_by(Blog.time_stamp.desc()).paginate(page, app.config['POST_PER_PAGE'], False)
-	
-	next_url = url_for('explore', page=posts.next_num) if posts.has_next else None
-		
-	prev_url = url_for('explore', page=posts.prev_num) if posts.has_prev else None
-		
-	return render_template('explore.html', title='TP-Blogs', posts=posts.items, next_url=next_url, prev_url=prev_url,\
-							form = form)
+	return render_template('explore.html', title='Explore Blogs',\
+							users = users, form = form)
 	
 @app.route('/user/<username>/popup')
 @login_required
