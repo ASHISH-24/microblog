@@ -6,10 +6,15 @@
 		</a>
 		</td>
 		<td>
+		{% set user_link %}
+		<span class='user_popup'>
 			<a href="{{url_for('user', username=post.author.username)}}">
 			{{post.author.username.title()}}</a>
-			said:<br>
-			<span id="post{{post.id}}">{{post.body}}</span><br>
+		</span>	
+		{% endset %}
+			
+			{{ user_link }} said:<br>
+			<span>{{post.body}}</span><br>
 			[{{moment(post.time_stamp).fromNow()}}]
 			<!--{% if post.language and post.landscape != g.locale %}
 			<br><br>
