@@ -1,12 +1,12 @@
-from app import app
+from flask import current_app
 import requests
 import json
 from flask_babel import _
 
 def translate(text, source_language, dest_language):
-	if not app.config['MS_TRANSLATOR_KEY']:
+	if not current_app.config['MS_TRANSLATOR_KEY']:
 		return _('Error: Translation serice is not configured')
-	auth = {'Ocp-Apim-Subscription-Key':app.config['MS_TRANSLATOR_KEY']}
+	auth = {'Ocp-Apim-Subscription-Key':current_app.config['MS_TRANSLATOR_KEY']}
 	r = requests.get('https://api.microsofttranslator.com/v2/Ajax.svc'
                      '/Translate?text={}&from={}&to={}'.\
 					 format(text, source_language, dest_language),\
